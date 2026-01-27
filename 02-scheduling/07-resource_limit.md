@@ -94,13 +94,13 @@ metadata:
   name: cpu-resource-constraint
 spec:
   limits:
-    - default:          # CPU Limit (If a container does NOT define resources.limits.cpu, Kubernetes will automatically set)
+    - default:          # CPU Limit (limit applied if user doesn’t specify one, if a container does NOT define resources.limits.cpu)
         cpu: 500m
-      defaultRequest:   # CPU Request (If a container does NOT define resources.requests.cpu, Kubernetes will set)
+      defaultRequest:   # CPU Request (request applied if user doesn’t specify one, if a container does NOT define resources.requests.cpu, Kubernetes will set)
         cpu: 500m
-      max:              # Maximum Limit (A container cannot set a CPU limit higher than 1 core.)
+      max:              # Maximum Limit (A container cannot set a CPU limit higher than 1 core, largest allowed value)
         cpu: "1"
-      min:              # Minimum Request (A container must request at least 100m CPU.)
+      min:              # Minimum Request (A container must request at least 100m CPU, smallest allowed value)
         cpu: 100m
       type: Container
 ```
