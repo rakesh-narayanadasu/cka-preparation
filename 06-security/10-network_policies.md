@@ -84,6 +84,13 @@ In this configuration:
 
 Keep in mind that isolation only applies to the traffic explicitly defined under `policyTypes`. Unspecified traffic is automatically allowed by default.
 
+To list network policies:
+```yaml
+kubectl get networkpolicy 
+or 
+kubectl get netpol
+```
+
 Below are two Pod YAMLs that match your NetworkPolicy:
 - One DB pod with label role: db
 - One API pod with label name: api-pod
@@ -182,16 +189,40 @@ spec:
       namespaceSelector:
         matchLabels:        # allow only from specific prod namespace
           name: prod
-    - ipBlock:              # allow from speific IP block 
+    - ipBlock:              # allow from speific IP block eg., connect to backup server
         cidr: 192.168.5.10/32
   ports:
   - protocol: TCP
     port: 3306
 ```
 
-In this configuration, the first entry under the `from` section restricts traffic to API pods in the production namespace (an AND condition). The second entry allows an external backup server by specifying its IP block.
+In this configuration, the first entry under the `from` section restricts traffic to API pods in the production namespace (an **AND condition**). The second entry allows an external backup server by specifying its IP block.
 
 >  Combining pod selectors with namespace selectors ensures that the rule applies only to the intended pods within the correct namespace.
+
+Below config allows `api-pod` from all namespaces, allows specific `pod` namespace and `cidr` IP range.
+
+```yaml
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:        
+          name: api-pod
+    - namespaceSelector:
+        matchLabels:        
+          name: prod
+    - ipBlock:              
+        cidr: 192.168.5.10/32
+  ports:
+  - protocol: TCP
+    port: 3306
+```
 
 ## Configuring Egress Traffic
 
@@ -232,6 +263,48 @@ spec:
 ```
 
 >  Ensure that your egress rules cover all required outbound connections. Missing an egress rule may inadvertently block critical communication between your services.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: internal-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      name: internal
+  policyTypes:
+  - Egress
+  - Ingress
+  ingress:
+    - {}
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          name: mysql
+    ports:
+    - protocol: TCP
+      port: 3306
+
+  - to:
+    - podSelector:
+        matchLabels:
+          name: payroll
+    ports:
+    - protocol: TCP
+      port: 8080
+
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+```
+
+**DNS is handled by the `kube-dns` service, which listens on port 53 for both UDP and TCP. Any destination on UDP/TCP port 53 (for DNS resolution, required for service discovery in Kubernetes)**
+
 
 ## Summary of Network Policy Configuration
 
